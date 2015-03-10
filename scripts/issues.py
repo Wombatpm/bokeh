@@ -19,7 +19,7 @@ logging.basicConfig(level=logging.INFO)
 
 API_PARAMS = {
     'base_url': 'https://api.github.com/repos',
-    'owner':    'ContinuumIO',
+    'owner':    'bokeh',
     'repo':     'bokeh',
 }
 
@@ -321,7 +321,7 @@ if __name__ == '__main__':
 
     issues = get_data(partial(query_all_issues, after), load_data=args.load_data, save_data=args.save_data)
 
-    if args.check or args.check_all:
+    if args.check:
         check_issues(issues)
 
     generate_changelog(issues, after, heading)

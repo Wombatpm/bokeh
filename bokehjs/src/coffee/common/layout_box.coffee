@@ -1,11 +1,10 @@
-
 define [
   "underscore",
-  "backbone",
+  "./collection",
   "kiwi",
   "./has_properties"
   "range/range1d",
-], (_, Backbone, kiwi, HasProperties, Range1d) ->
+], (_, Collection, kiwi, HasProperties, Range1d) ->
 
   Var = kiwi.Variable
   Expr = kiwi.Expression
@@ -75,11 +74,17 @@ define [
       @register_setter('aspect', @_set_aspect)
       @add_dependencies('aspect', this, ['width', 'height'])
 
+    contains: (vx, vy) ->
+      return (
+        vx >= @get('left') and vx <= @get('right') and
+        vy >= @get('bottom') and vy <= @get('top')
+      )
+
     _set_var: (value, prop_name) ->
       v = @['_' + prop_name]
-      if typeof value == 'number'
+      if _.isNumber(value)
         @solver.suggest_value(v, value);
-      else if typeof value == 'string'
+      else if _.isString(value)
           # handle namespaced later
       else
         c = new Constraint(new Expr(v, [-1, value]), EQ)
@@ -98,8 +103,8 @@ define [
         @_aspect_constraint = c
         @solver.add_constraint(c)
 
-    defaults: () ->
-      return {
+    defaults: ->
+      return _.extend {}, super(), {
         'top_strength': kiwi.Strength.strong,
         'bottom_strength': kiwi.Strength.strong,
         'left_strength': kiwi.Strength.strong,
@@ -108,7 +113,7 @@ define [
         'height_strength': kiwi.Strength.strong
       }
 
-  class LayoutBoxs extends Backbone.Collection
+  class LayoutBoxs extends Collection
     model: LayoutBox
 
   return {

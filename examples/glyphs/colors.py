@@ -3,8 +3,8 @@ from __future__ import print_function
 from math import pi
 import pandas as pd
 
-from bokeh.objects import Plot, ColumnDataSource, FactorRange, CategoricalAxis, Glyph
-from bokeh.glyphs import Circle, Rect
+from bokeh.models import Plot, ColumnDataSource, FactorRange, CategoricalAxis, TapTool, HoverTool, OpenURL
+from bokeh.models.glyphs import Rect
 from bokeh.document import Document
 from bokeh.embed import file_html
 from bokeh.resources import INLINE
@@ -164,19 +164,23 @@ ydr = FactorRange(factors=list(reversed(css3_colors.Name)))
 
 plot = Plot(title="CSS3 Color Names", x_range=xdr, y_range=ydr, plot_width=600, plot_height=2000)
 
-xaxis_top    = CategoricalAxis(plot=plot, major_label_orientation=pi/4)
-plot.above.append(xaxis_top)
-xaxis_bottom = CategoricalAxis(plot=plot, major_label_orientation=pi/4)
-plot.below.append(xaxis_bottom)
-yaxis        = CategoricalAxis(plot=plot)
-plot.left.append(yaxis)
-
-# XXX: Wrong radius. Doesn't respect 'radius'. 'line_color' on 'rect' affects 'circle'.
-# circle = Circle(x="groups", y="names", radius=1, fill_color="colors")
-# plot.renderers.append(Glyph(data_source=source, xdata_range=xdr, ydata_range=ydr, glyph=circle))
-
 rect = Rect(x="groups", y="names", width=1, height=1, fill_color="colors", line_color=None)
-plot.renderers.append(Glyph(data_source=source, xdata_range=xdr, ydata_range=ydr, glyph=rect))
+rect_renderer = plot.add_glyph(source, rect)
+
+xaxis_above = CategoricalAxis(major_label_orientation=pi/4)
+plot.add_layout(xaxis_above, 'above')
+
+xaxis_below = CategoricalAxis(major_label_orientation=pi/4)
+plot.add_layout(xaxis_below, 'below')
+
+plot.add_layout(CategoricalAxis(), 'left')
+
+url = "http://www.colors.commutercreative.com/@names/"
+tooltips = """Click the color to go to:<br /><a href="{url}">{url}</a>""".format(url=url)
+
+tap = TapTool(plot=plot, renderers=[rect_renderer], action=OpenURL(url=url))
+hover = HoverTool(plot=plot, renderers=[rect_renderer], tooltips=tooltips)
+plot.tools.extend([tap, hover])
 
 doc = Document()
 doc.add(plot)

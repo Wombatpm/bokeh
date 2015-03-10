@@ -1,4 +1,3 @@
-
 This example shows how to create a simple applet in Bokeh, which can
 be viewed in two different ways:
 
@@ -9,17 +8,22 @@ You will need to first download some sample data, then follow the
 instructions for running the example.
 
 Sample Data
-============
+===========
 
 To run the stocks applet example, you first need to download a sample data
 file. The file is located at:
 
     http://quantquote.com/files/quantquote_daily_sp500_83986.zip
 
+A python script is included in the applet's directory to collect and extract 
+the data, which can be run directly from the directory:
+
+    python stock_data.py
+
 You can use a browser to download the file, or depending on your system you
 may be able to use curl:
 
-    curl http://quantquote.com/files/quantquote_daily_sp500_83986.zip > quantquote_daily_sp500_83986.zip
+    curl -O http://quantquote.com/files/quantquote_daily_sp500_83986.zip
 
 or wget:
 
@@ -31,7 +35,12 @@ clicking on it, or by executing this command from the command line:
 
     unzip quantquote_daily_sp500_83986.zip
 
-This should leave a "daily" subdirectory in this directory.
+This should leave a "quantquote_daily_sp500_83986" subdirectory in this directory.
+Move the 'daily' directory by executing this command from the command line:
+
+    mv 'quantquote_daily_sp500_83986/daily .'
+
+Now you can safely remove the empty "quantquote_daily_sp500_83986" directory.
 
 Running
 =======
@@ -64,5 +73,4 @@ Next you need to run the flask server that embeds the stock applet:
 Now you can see the stock correlation applet by navigating to the following
 URL in a browser:
 
-    http://localhost:5050/app
-
+    http://localhost:5050/

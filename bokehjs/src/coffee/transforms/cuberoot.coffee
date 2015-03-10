@@ -1,30 +1,15 @@
 define [
-  "common/continuum_view"
-  "backbone",
-  "common/has_parent"
-], (continuum_view, Backbone, HasParent) ->
-  class CuberootView extends continuum_view.View
-    attributes:
-      class: "CuberootView"
+  "common/collection",
+  "./transform",
+], (Collection, Transform) ->
 
-    initialize: (options) ->
-      super(options)
-      @render_init()
+  class Cuberoot extends Transform
+    type: "Cuberoot"
 
-    delegateEvents: (events) ->
-      super(events)
-      "pass"
+  class Cuberoots extends Collection
+    model: Cuberoot
 
-    render_init: () ->
-      @$el.html("")
-
-  class Cuberoot extends HasParent
-    type : "Cuberoot"
-    default_view: CuberootView
-  
-  class Cuberoots extends Backbone.Collection
-    model : Cuberoot
   return {
-    "Model" : Cuberoot 
-    "Collection" : new Cuberoots()
+    Model: Cuberoot
+    Collection: new Cuberoots()
   }

@@ -21,23 +21,30 @@ requirements:
     - requests
     - dateutil
     - pyyaml
+    - pyzmq
+    - tornado >=4.0
 
     # server
     - flask
     - werkzeug
     - greenlet
-    - redis                [linux or osx]
-    - redis-py             [linux or osx]
+    # - redis                [linux or osx]
+    # - redis-py             [linux or osx]
     - gevent               [py2k]
     - gevent-websocket     [py2k]
-    - abstract-rendering   [py2k]
+    # - abstract-rendering   [py2k]
+
+    # CLI
+    # - click
 
 test:
   requires:
     # docs
+    - graphviz
     - sphinx
     - pygments
     - sphinx-bootstrap-theme
+    - sphinxcontrib-httpdomain
     - sphinxcontrib-napoleon
 
     # tests
@@ -56,10 +63,11 @@ test:
 
     # examples
     - scipy
-    - matplotlib <1.4.0
+    - matplotlib
     - sympy
     - ggplot
     - seaborn
+    - icalendar
 
   commands:
     - bokeh-server -h        [linux64 or osx]
@@ -68,5 +76,5 @@ test:
     - bokeh
 
 about:
-  home: https://github.com/ContinuumIO/Bokeh
+  home: https://github.com/bokeh/bokeh
   license: New BSD

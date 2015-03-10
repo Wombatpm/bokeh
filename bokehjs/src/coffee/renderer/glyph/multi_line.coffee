@@ -1,4 +1,3 @@
-
 define [
   "underscore",
   "renderer/properties",
@@ -10,18 +9,13 @@ define [
     _fields: ['xs', 'ys']
     _properties: ['line']
 
-    _map_data: () ->
-      null
-
-    _render: (ctx, indices, glyph_props) ->
-
+    _render: (ctx, indices) ->
       for i in indices
-
         x = @xs[i]
         y = @ys[i]
-        [sx, sy] = @plot_view.map_to_screen(x, @glyph_props.xs.units, y, @glyph_props.ys.units)
+        [sx, sy] = @renderer.map_to_screen(@xs[i], @glyph.xs.units, @ys[i], @glyph.ys.units)
 
-        glyph_props.line_properties.set_vectorize(ctx, i)
+        @props.line.set_vectorize(ctx, i)
         for j in [0...sx.length]
           if j == 0
             ctx.beginPath()
@@ -40,20 +34,16 @@ define [
 
   class MultiLine extends Glyph.Model
     default_view: MultiLineView
-    type: 'Glyph'
+    type: 'MultiLine'
 
-    display_defaults: () ->
-      return _.extend(super(), {
-        line_color: 'red'
-        line_width: 1
-        line_alpha: 1.0
-        line_join: 'miter'
-        line_cap: 'butt'
-        line_dash: []
-        line_dash_offset: 0
-      })
+    display_defaults: ->
+      return _.extend {}, super(), @line_defaults
+
+  class MultiLines extends Glyph.Collection
+    model: MultiLine
 
   return {
-    "Model": MultiLine,
-    "View": MultiLineView,
+    Model: MultiLine
+    View: MultiLineView
+    Collection: new MultiLines()
   }

@@ -4,13 +4,15 @@
 from bokeh.sampledata.iris import flowers
 from bokeh.plotting import *
 
-output_server("iris")
-
 colormap = {'setosa': 'red', 'versicolor': 'green', 'virginica': 'blue'}
-
 flowers['color'] = flowers['species'].map(lambda x: colormap[x])
 
-scatter(flowers["petal_length"], flowers["petal_width"], color=flowers["color"], fill_alpha=0.2, size=10)
+output_server("iris")
 
-# open a browser
-show()
+p = figure(title = "Iris Morphology")
+p.xaxis.axis_label = 'Petal Length'
+p.yaxis.axis_label = 'Petal Width'
+
+p.circle(flowers["petal_length"], flowers["petal_width"],
+        color=flowers["color"], fill_alpha=0.2, size=10, )
+show(p)

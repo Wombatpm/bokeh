@@ -2,19 +2,24 @@
 Requirements
 ============
 
-Sphinx must be installed. Additionally, we use the Sphinx 
+Sphinx must be installed. Additionally, we use the Sphinx
 bootstrap theme:
 
     $ pip install sphinx-bootstrap-theme
-    $pip install sphinxcontrib-napoleon
+    $ pip install sphinxcontrib-napoleon
+    $ pip install sphinxcontrib-httpdomain
 
 To build the gallery, ggplot and seaborn are also needed:
 
-    $ pip install ggpplot
+    $ pip install ggplot
     $ pip install seaborn
 
 Building
 ========
+
+Build requires to install sampledata:
+
+    $ python -c 'import bokeh; bokeh.sampledata.download()'
 
 To build the entire docs:
 
@@ -31,3 +36,10 @@ To deploy the docs to bokeh.pydata.org:
     $ fab deploy
 
 Note: requires having SSH keys for "bokeh" user.
+
+
+objects.graffle
+===============
+The objects.graffle file was created using the commercial OmniGraffle package. It 
+was exported as a PNG image in _images/objects.png.
+

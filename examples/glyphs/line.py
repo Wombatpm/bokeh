@@ -6,10 +6,10 @@ import numpy as np
 from bokeh.browserlib import view
 from bokeh.document import Document
 from bokeh.embed import file_html
-from bokeh.glyphs import Line
-from bokeh.objects import (
-    Plot, DataRange1d, LinearAxis, ColumnDataSource, Glyph,
-    PanTool, WheelZoomTool, PreviewSaveTool, ObjectExplorerTool
+from bokeh.models.glyphs import Line
+from bokeh.models import (
+    Plot, DataRange1d, LinearAxis, ColumnDataSource,
+    PanTool, WheelZoomTool, PreviewSaveTool
 )
 from bokeh.resources import INLINE
 
@@ -17,38 +17,24 @@ x = np.linspace(-2*pi, 2*pi, 1000)
 y = sin(x)
 z = cos(x)
 
-source = ColumnDataSource(
-    data=dict(
-        x=x,
-        y=y,
-    )
-)
+source = ColumnDataSource(data=dict(x=x, y=y))
 
 xdr = DataRange1d(sources=[source.columns("x")])
 ydr = DataRange1d(sources=[source.columns("y")])
 
-line_glyph = Line(x="x", y="y", line_color="blue")
-
-renderer = Glyph(
-        data_source = source,
-        xdata_range = xdr,
-        ydata_range = ydr,
-        glyph = line_glyph
-        )
-
 plot = Plot(x_range=xdr, y_range=ydr, min_border=50)
-xaxis = LinearAxis(plot=plot)
-plot.below.append(xaxis)
-yaxis = LinearAxis(plot=plot)
-plot.left.append(yaxis)
 
-pantool = PanTool(dimensions=["width", "height"])
-wheelzoomtool = WheelZoomTool(dimensions=["width", "height"])
-previewsave = PreviewSaveTool(plot=plot)
-objectexplorer = ObjectExplorerTool()
+line_glyph = Line(x="x", y="y", line_color="blue")
+plot.add_glyph(source, line_glyph)
 
-plot.renderers.append(renderer)
-plot.tools = [pantool, wheelzoomtool, previewsave, objectexplorer]
+plot.add_layout(LinearAxis(), 'below')
+plot.add_layout(LinearAxis(), 'left')
+
+pan = PanTool()
+wheel_zoom = WheelZoomTool()
+preview_save = PreviewSaveTool()
+
+plot.add_tools(pan, wheel_zoom, preview_save)
 
 doc = Document()
 doc.add(plot)

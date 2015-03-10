@@ -1,30 +1,15 @@
 define [
-  "common/continuum_view"
-  "backbone",
-  "common/has_parent",
-], (continuum_view, Backbone, HasParent) ->
-  class ConstView extends continuum_view.View
-    attributes:
-      class: "ConstView"
+  "common/collection",
+  "./transform",
+], (Collection, Transform) ->
 
-    initialize: (options) ->
-      super(options)
-      @render_init()
+  class Const extends Transform
+    type: "Const"
 
-    delegateEvents: (events) ->
-      super(events)
-      "pass"
+  class Consts extends Collection
+    model: Const
 
-    render_init: () ->
-      @$el.html("")
-  
-  class Const extends HasParent
-    type : "Const"
-    default_view: ConstView 
-  
-  class Consts extends Backbone.Collection
-    model : Const
   return {
-    "Model" : Const 
-    "Collection" : new Consts()
+    Model: Const
+    Collection: new Consts()
   }

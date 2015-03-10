@@ -3,10 +3,13 @@ from __future__ import division
 import numpy as np
 from six.moves import zip
 from collections import OrderedDict
-from bokeh.plotting import *
-from bokeh.objects import HoverTool
 
-TOOLS="pan,wheel_zoom,box_zoom,reset,hover,previewsave"
+from bokeh.plotting import *
+from bokeh.models import HoverTool
+
+output_file("hover.html")
+
+TOOLS="crosshair,pan,wheel_zoom,box_zoom,reset,hover,previewsave"
 
 xx, yy = np.meshgrid(range(0,101,4), range(0,101,4))
 x = xx.flatten()
@@ -32,21 +35,15 @@ source = ColumnDataSource(
     )
 )
 
-output_file("hover.html")
+p = figure(title="Hoverful Scatter", tools=TOOLS)
 
-hold()
+p.circle(x, y, radius=radii, source=source,
+    fill_color=colors, fill_alpha=0.6, line_color=None)
 
-circle(x, y, radius=radii, source=source, tools=TOOLS,
-       fill_color=colors, fill_alpha=0.6,
-       line_color=None, Title="Hoverful Scatter")
+p.text(x, y, text=inds, alpha=0.5, text_font_size="5pt",
+     text_baseline="middle", text_align="center")
 
-text(x, y, text=inds, alpha=0.5, text_font_size="5pt",
-     text_baseline="middle", text_align="center", angle=0)
-
-# We want to add some fields for the hover tool to interrogate, but first we
-# have to get ahold of the tool. This will be made easier in future releases.
-hover = [t for t in curplot().tools if isinstance(t, HoverTool)][0]
-
+hover =p.select(dict(type=HoverTool))
 hover.tooltips = OrderedDict([
     ("index", "$index"),
     ("(x,y)", "($x, $y)"),
@@ -56,4 +53,4 @@ hover.tooltips = OrderedDict([
     ("bar", "@bar"),
 ])
 
-show()  # open a browser
+show(p)  # open a browser

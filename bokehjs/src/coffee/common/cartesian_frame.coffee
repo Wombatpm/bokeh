@@ -1,12 +1,15 @@
 define [
-  "underscore",
-  "backbone",
-  "./layout_box",
-  "mapper/linear_mapper",
-  "mapper/log_mapper",
-  "mapper/categorical_mapper",
-  "mapper/grid_mapper",
-], (_, Backbone, LayoutBox, LinearMapper, LogMapper, CategoricalMapper, GridMapper) ->
+  "underscore"
+  "./collection"
+  "./layout_box"
+  "./logging"
+  "mapper/linear_mapper"
+  "mapper/log_mapper"
+  "mapper/categorical_mapper"
+  "mapper/grid_mapper"
+], (_, Collection, LayoutBox, Logging, LinearMapper, LogMapper, CategoricalMapper, GridMapper) ->
+
+  logger = Logging.logger
 
   class CartesianFrame extends LayoutBox.Model
     type: 'CartesianFrame'
@@ -45,50 +48,35 @@ define [
 
       @listenTo(@solver, 'layout_update', @_update_mappers)
 
-    map_to_screen: (x, x_units, y, y_units, canvas, name='default') ->
+    map_to_screen: (x, x_units, y, y_units, canvas, x_name='default', y_name='default') ->
       if x_units == 'screen'
         if _.isArray(x)
           vx = x[..]
         else
           vx = new Float64Array(x.length)
           vx.set(x)
+        hoff = @get('h_range').get('start')
+        for i in [0...vx.length]
+          vx[i] += hoff
       else
-        vx = @get('x_mappers')[name].v_map_to_target(x)
+        vx = @get('x_mappers')[x_name].v_map_to_target(x)
+
       if y_units == 'screen'
         if _.isArray(y)
           vy = y[..]
         else
           vy = new Float64Array(y.length)
           vy.set(y)
+        voff = @get('v_range').get('start')
+        for i in [0...vy.length]
+          vy[i] += voff
       else
-        vy = @get('y_mappers')[name].v_map_to_target(y)
+        vy = @get('y_mappers')[y_name].v_map_to_target(y)
 
       sx = canvas.v_vx_to_sx(vx)
       sy = canvas.v_vy_to_sy(vy)
 
       return [sx, sy]
-
-    map_from_screen: (sx, sy, units, canvas) ->
-      if _.isArray(sx)
-        dx = sx[..]
-      else
-        dx = new Float64Array(sx.length)
-        dx.set(sx)
-      if _.isArray(sy)
-        dy = sy[..]
-      else
-        dy = new Float64Array(sy.length)
-        dy.set(sy)
-      sx = canvas.v_sx_to_vx(dx)
-      sy = canvas.v_sy_to_vy(dy)
-
-      if units == 'screen'
-        x = sx
-        y = sy
-      else
-        [x, y] = @mapper.v_map_from_target(sx, sy)  # TODO: inplace?
-
-      return [x, y]
 
     _get_ranges: (dim) ->
       ranges = {}
@@ -96,7 +84,8 @@ define [
       extra_ranges = @get("extra_#{dim}_ranges")
       if extra_ranges?
         for name, range of extra_ranges
-          ranges[name] = range
+          # resolve ref needed because dicts are not auto-resolved
+          ranges[name] = @resolve_ref(range)
       return ranges
 
     _get_mappers: (dim, ranges, frame_range) ->
@@ -110,7 +99,7 @@ define [
         else if range.type == "FactorRange"
           mapper_type = CategoricalMapper.Model
         else
-          console.log "Unknown range type for range '#{name}': #{range}"
+          logger.warn("unknown range type for range '#{name}': #{range}")
           return null
         mappers[name] = new mapper_type({
           source_range: range
@@ -124,13 +113,13 @@ define [
       for name, mapper of @get('y_mappers')
         mapper.set('target_range', @get('v_range'))
 
-    defaults: () ->
-      return {
+    defaults: ->
+      return _.extend {}, super(), {
         extra_x_ranges: {}
         extra_y_ranges: {}
       }
 
-  class CartesianFrames extends Backbone.Collection
+  class CartesianFrames extends Collection
     model: CartesianFrame
 
   return {

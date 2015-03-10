@@ -1,15 +1,21 @@
-
 define [
-  "underscore",
-  "backbone",
-  "require",
+  "jquery"
+  "underscore"
+  "backbone"
+  "require"
   "./base"
-], (_, Backbone, require, base) ->
+  "./logging"
+], ($, _, Backbone, require, base, Logging) ->
+
+  logger = Logging.logger
 
   _is_ref = (arg) ->
     if _.isObject(arg)
       keys = _.keys(arg).sort()
-      return keys.length==2 and keys[0]=='id' and keys[1]=='type'
+      if keys.length==2
+        return keys[0]=='id' and keys[1]=='type'
+      if keys.length==3
+        return keys[0]=='id' and keys[1]=='subtype' and keys[2]=='type'
     return false
 
   class HasProperties extends Backbone.Model
@@ -28,6 +34,12 @@ define [
 
     isNew: () ->
       return false
+
+    attrs_and_props : () ->
+      data = _.clone(@attributes)
+      for prop_name in _.keys(@properties)
+        data[prop_name] = @get(prop_name)
+      return data
 
     constructor : (attributes, options) ->
       ## straight from backbone.js
@@ -64,6 +76,36 @@ define [
 
       if not options.defer_initialization
         this.initialize.apply(this, arguments)
+
+    forceTrigger: (changes) ->
+      # This is "trigger" part of backbone's set() method. set() is unable to work with
+      # mutable data structures, so instead of using set() we update data in-place and
+      # then call forceTrigger() which will make sure all listeners are notified of any
+      # changes, e.g.:
+      #
+      #   source.get("data")[field][index] += 1
+      #   source.forceTrigger()
+      #
+      if not _.isArray(changes)
+        changes = [changes]
+
+      options    = {}
+      changing   = @_changing
+      @_changing = true
+
+      if changes.length then @_pending = true
+      for change in changes
+        @trigger('change:' + change, this, @attributes[change], options)
+
+      if changing then return this
+      while @_pending
+        @_pending = false
+        @trigger('change', this, options)
+
+      @_pending = false
+      @_changing = false
+
+      return this
 
     set_obj: (key, value, options) ->
       if _.isObject(key) or key == null
@@ -227,7 +269,7 @@ define [
           @add_cache(prop_name, computed)
         return computed
 
-    ref: ->
+    ref: () ->
       # ### method: HasProperties::ref
       # generates a reference to this model
       'type': this.type
@@ -260,8 +302,7 @@ define [
       # model where our API processes this model
       doc = @get('doc')
       if not doc?
-        console.log("WARN: Unset 'doc' in " + this)
-        # throw new Error("Unset 'doc' in " + this)
+        logger.error("unset 'doc' in #{@}")
 
       url = @get_base().Config.prefix + "bokeh/bb/" + doc + "/" + @type + "/"
       if (@isNew())
@@ -276,8 +317,7 @@ define [
       # HasProperties.prototype.sync = Backbone.sync
       return options.success(model.attributes, null, {})
 
-    defaults: () ->
-      return {}
+    defaults: -> {}
 
     rpc: (funcname, args, kwargs) =>
       prefix = @get_base().Config.prefix

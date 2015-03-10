@@ -1,139 +1,129 @@
-from __future__ import print_function
+from __future__ import absolute_import, print_function
 
-# NOTE: Execute patch_all() before everything else, especially before
-# importing threading module. Otherwise, annoying KeyError exception
-# will be thrown. gevent is optional, so don't fail if not installed.
-try:
-    import gevent.monkey
-except ImportError:
-    pass
-else:
-    gevent.monkey.patch_all()
-from os.path import join, dirname
 import argparse, os, sys
 import logging
+
 import werkzeug.serving
-import imp
-import sys
 
-from bokeh.server.utils.reload import robust_reloader
-from bokeh.server.app import bokeh_app
-from bokeh.settings import settings
+from bokeh import __version__; __version__
+from bokeh.server.utils.reload import robust_reloader; robust_reloader
+from bokeh.server.app import bokeh_app; bokeh_app
+from bokeh.settings import settings; settings
 
-DEFAULT_BACKEND = os.environ.get('BOKEH_SERVER_DEFAULT_BACKEND', 'shelve')
+DEFAULT_BACKEND = os.environ.get('BOKEH_SERVER_DEFAULT_BACKEND', 'memory')
 if DEFAULT_BACKEND not in ['redis', 'shelve', 'memory']:
     print("Unrecognized default backend: '%s'. Accepted values are: 'redis', 'shelve', 'memory'" % DEFAULT_BACKEND)
     sys.exit(1)
 
 def build_parser():
     parser = argparse.ArgumentParser(description="Start the Bokeh plot server")
-    parser.add_argument("-d", "--debug",
-                        action="store_true",
-                        default=False,
-                        help="debug mode for flask"
-                        )
-    parser.add_argument("-j", "--debugjs",
-                        action="store_true",
-                        default=False,
-                        help="Whether to use bokehjs from the bokehjs build directory in the source tree or not"
-                        )
-    parser.add_argument("-s", "--splitjs",
-                        action="store_true",
-                        default=False,
-                        help="don't serve compiled bokeh.js file.  This can only be True if debugjs is True"
-                        )
-    parser.add_argument("--filter-logs",
-                        action="store_true",
-                        default=False,
-                        help="don't show GET /static/... 200 OK (useful with --splitjs)")
-    parser.add_argument("-v", "--verbose", action="store_true", default=False)
-    parser.add_argument("--backend",
-                        help="storage backend: [ redis | memory | shelve ], default: %s" % DEFAULT_BACKEND,
-                        type=str,
-                        default=DEFAULT_BACKEND
-                        )
-    parser.add_argument("--ip",
-                        help="The IP address the bokeh server will listen on",
-                        type=str,
-                        default="127.0.0.1"
-                        )
-    ## websockets
-    parser.add_argument("--ws-conn-string",
-                        help="conn string for websocket, unnecessary if autostarting",
-                        default=None
-    )
 
-    parser.add_argument("--zmqaddr",
-                        help="zmq url",
-                        default="tcp://127.0.0.1:5555"
-    )
+    # general configuration
+    general = parser.add_argument_group('General Options')
+    general.add_argument("--ip",
+                         help="IP address that the bokeh server will listen on (default: 127.0.0.1)",
+                         type=str,
+                         default="127.0.0.1"
+                         )
+    general.add_argument("--port", "--bokeh-port",
+                         help="Port that the bokeh server will listen on (default: 5006)",
+                         type=int,
+                         default=5006
+                         )
+    general.add_argument("--url-prefix",
+                         help="URL prefix for server. e.g. 'host:port/<prefix>/bokeh' (default: None)",
+                         type=str
+                         )
 
-    parser.add_argument("--no-ws-start",
-                        help="auto start a websocket worker",
-                        default=False,
-                        action="store_true"
-    )
+    # advanced configuration
+    advanced = parser.add_argument_group('Advanced Options')
+    advanced.add_argument("-D", "--blaze-config",
+                          help="blaze_config_File",
+                          type=str,
+                          default=None
+                          )
+    advanced.add_argument("-m", "--multi-user",
+                          help="start in multi-user configuration (default: False)",
+                          action="store_true",
+                          default=False
+                          )
+    advanced.add_argument("--script",
+                          help="script to load (for applets)",
+                          default=None,
+                          type=str
+                          )
 
-    parser.add_argument("--ws-port",
-                        help="port for websocket worker",
-                        default=5007,
-                        type=int
-    )
-
-    ## end websockets
-
-    parser.add_argument("--bokeh-port",
-                        help="port for bokeh server",
-                        type=int,
-                        default=5006
-                        )
-    parser.add_argument("--redis-port",
-                        help="port for redis",
-                        type=int,
-                        default=7001
-                        )
-    parser.add_argument("--start-redis",
-                        help="start redis",
-                        action="store_true",
-                        dest="start_redis",
-                        )
-    parser.add_argument("--no-start-redis",
-                        help="do not start redis",
-                        action="store_false",
-                        dest="start_redis",
-                        )
+    # storage config
+    storage = parser.add_argument_group('Storage Options')
+    storage.add_argument("--backend",
+                         help="storage backend: [ redis | memory | shelve ], (default: %s)" % DEFAULT_BACKEND,
+                         type=str,
+                         default=DEFAULT_BACKEND
+                         )
+    storage.add_argument("--redis-port",
+                         help="port for redis server to listen on (default: 7001)",
+                         type=int,
+                         default=7001
+                         )
+    storage.add_argument("--start-redis",
+                         help="start redis",
+                         action="store_true",
+                         dest="start_redis",
+                         )
+    storage.add_argument("--no-start-redis",
+                         help="do not start redis",
+                         action="store_false",
+                         dest="start_redis",
+                         )
     parser.set_defaults(start_redis=True)
-    parser.add_argument("-m", "--multi-user",
-                        help="multi user",
-                        action="store_true",
-                        default=False
-                        )
-    parser.add_argument("-D", "--data-directory",
-                        help="data directory",
-                        type=str
-                        )
-    parser.add_argument("--robust-reload",
-                        help="whether to protect debug server reloading from syntax errors",
-                        default=False,
-                        action="store_true",
-                       )
-    parser.add_argument("--script",
-                        help="script to load(for applets)",
-                        default=None,
-                        type=str
-                       )
-    parser.add_argument("--url-prefix",
-                        help="url prefix",
-                        type=str
-                        )
 
+    # websockets config
+    websockets = parser.add_argument_group('Websocket Options')
+    websockets.add_argument("--ws-conn-string",
+                            help="connection string for websocket (unnecessary if auto-starting)",
+                            default=None
+                            )
+    # dev, debugging, etc.
     class DevAction(argparse.Action):
         def __call__(self, parser, namespace, values, option_string=None):
             namespace.splitjs = True
             namespace.debugjs = True
             namespace.backend = 'memory'
 
-    parser.add_argument("--dev", action=DevAction, nargs=0, help="run server in development mode")
+    dev = parser.add_argument_group('Development Options')
+    dev.add_argument("-d", "--debug",
+                     action="store_true",
+                     default=False,
+                     help="use debug mode for Flask"
+                     )
+    dev.add_argument("--dev",
+                     action=DevAction,
+                     nargs=0,
+                     help="run server in development mode"
+                     )
+    dev.add_argument("--filter-logs",
+                     action="store_true",
+                     default=False,
+                     help="don't show 'GET /static/... 200 OK', useful with --splitjs")
+    dev.add_argument("-j", "--debugjs",
+                     action="store_true",
+                     default=False,
+                     help="serve BokehJS files from the bokehjs build directory in the source tree"
+                     )
+    dev.add_argument("-s", "--splitjs",
+                     action="store_true",
+                     default=False,
+                     help="serve individual JS files instead of compiled bokeh.js, requires --debugjs"
+                     )
+    dev.add_argument("--robust-reload",
+                     help="protect debug server reloading from syntax errors",
+                     default=False,
+                     action="store_true",
+                     )
+    dev.add_argument("-v", "--verbose",
+                     action="store_true",
+                     default=False
+                     )
 
     return parser
 
@@ -142,7 +132,10 @@ def run():
     args = parser.parse_args(sys.argv[1:])
 
     level = logging.DEBUG if args.debug else logging.INFO
+    # TODO: this does nothing - because bokeh/__init__.py is already imported
+    # and basicConfig was already called
     logging.basicConfig(level=level, format="%(asctime)s:%(levelname)s:%(name)s:%(message)s")
+
 
     backend_options = args.backend
     if backend_options == 'redis':
@@ -160,70 +153,30 @@ def run():
         name + ":" + onoff[vars(args).get(name)]for name in ['splitjs', 'debugjs']
     )
 
+    if not args.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+        print("""
+    Bokeh Server Configuration
+    ==========================
+    python version : %s
+    bokeh version  : %s
+    listening      : %s:%d
+    backend        : %s
+    python options : %s
+    js options     : %s
+    """ % (
+        sys.version.split()[0], __version__,
+        args.ip, args.port,
+        backend_options,
+        py_options,
+        js_options,
+    ))
 
-    print("""
-Bokeh Server Configuration
-==========================
-listening      : %s:%d
-backend        : %s
-python options : %s
-js options     : %s
-data-directory : %s
-""" % (
-    args.ip, args.bokeh_port,
-    backend_options,
-    py_options,
-    js_options,
-    None if not args.data_directory else args.data_directory,
-))
-
-    if args.filter_logs:
-        class StaticFilter(logging.Filter):
-
-            def filter(self, record):
-                msg = record.getMessage()
-                return not (msg.startswith(("GET /static", "GET /bokehjs/static")) and \
-                            any(status in msg for status in ["200 OK", "304 NOT MODIFIED"]))
-
-        for handler in logging.getLogger().handlers:
-            handler.addFilter(StaticFilter())
     settings.debugjs = args.debugjs
-    if args.debug :
-        extra_files = settings.js_files() + settings.css_files()
-        start_with_reloader(args, extra_files, args.robust_reload)
-    else:
-        start_server(args)
+    start_server(args)
 
 def start_server(args):
     from . import start
-
-    bokeh_app.debug = args.debug
-    bokeh_app.splitjs = args.splitjs
-    bokeh_app.debugjs = args.debugjs
-
-    backend = {
-        "type": args.backend,
-        "redis_port": args.redis_port,
-        "start_redis": args.start_redis,
-    }
-    websocket = {
-        "ws_conn_string" : args.ws_conn_string,
-        "zmqaddr" : args.zmqaddr,
-        "no_ws_start" : args.no_ws_start,
-        "ws_port" : args.ws_port,
-    }
-    start.prepare_app(backend, single_user_mode=not args.multi_user,
-                      data_directory=args.data_directory)
-    start.configure_websocket(websocket)
-    if args.script:
-        script_dir = dirname(args.script)
-        if script_dir not in sys.path:
-            print ("adding %s to python path" % script_dir)
-            sys.path.append(script_dir)
-        print ("importing %s" % args.script)
-        imp.load_source("_bokeh_app", args.script)
-    start.register_blueprint(args.url_prefix)
-    start.start_app(host=args.ip, port=args.bokeh_port, verbose=args.verbose)
+    start.start_simple_server(args)
 
 def start_with_reloader(args, js_files, robust):
     def helper():

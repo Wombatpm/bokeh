@@ -1,10 +1,10 @@
 
 define [
   "underscore",
-  "backbone",
+  "./collection",
   "./solver",
   "./plot",
-], (_, Backbone, Solver, Plot) ->
+], (_, Collection, Solver, Plot) ->
 
   class GMapPlotView extends Plot.View
 
@@ -19,10 +19,12 @@ define [
       if range_info.sdx?
         @map.panBy(range_info.sdx, range_info.sdy)
       else
-        sw_lng = Math.min(range_info.xr.start, range_info.xr.end)
-        ne_lng = Math.max(range_info.xr.start, range_info.xr.end)
-        sw_lat = Math.min(range_info.yr.start, range_info.yr.end)
-        ne_lat = Math.max(range_info.yr.start, range_info.yr.end)
+        xr = range_info.xrs.default
+        yr = range_info.yrs.default
+        sw_lng = Math.min(xr.start, xr.end)
+        ne_lng = Math.max(xr.start, xr.end)
+        sw_lat = Math.min(yr.start, yr.end)
+        ne_lat = Math.max(yr.start, yr.end)
 
         center = new google.maps.LatLng((ne_lat+sw_lat)/2, (ne_lng+sw_lng)/2)
 
@@ -47,59 +49,73 @@ define [
     bind_bokeh_events: () ->
       super()
 
-      iw = @frame.get('width')
-      ih = @frame.get('height')
-      top = @frame.get('bottom')  # TODO (bev) view/screen
-      left = @frame.get('left')
+      width = @frame.get('width')
+      height = @frame.get('height')
+      left = @canvas.vx_to_sx(@frame.get('left'))
+      top = @canvas.vy_to_sy(@frame.get('top'))
 
       @canvas_view.map_div.attr("style", "top: #{top}px; left: #{left}px; position: absolute")
-      @canvas_view.map_div.attr('style', "width:#{iw}px;")
-      @canvas_view.map_div.attr('style', "height:#{ih}px;")
-      @canvas_view.map_div.width("#{iw}px").height("#{ih}px")
+      @canvas_view.map_div.attr('style', "width:#{width}px;")
+      @canvas_view.map_div.attr('style', "height:#{height}px;")
+      @canvas_view.map_div.width("#{width}px").height("#{height}px")
+
       @initial_zoom = @mget('map_options').zoom
 
       build_map = () =>
+        maps = window.google.maps
+        map_types = {
+          "satellite": maps.MapTypeId.SATELLITE,
+          "terrain": maps.MapTypeId.TERRAIN,
+          "roadmap": maps.MapTypeId.ROADMAP,
+          "hybrid": maps.MapTypeId.HYBRID
+        }
         mo = @mget('map_options')
         map_options =
-          center: new google.maps.LatLng(mo.lat, mo.lng)
+          center: new maps.LatLng(mo.lat, mo.lng)
           zoom:mo.zoom
           disableDefaultUI: true
-          mapTypeId: google.maps.MapTypeId.SATELLITE
+          mapTypeId: map_types[mo.map_type]
 
         # Create the map with above options in div
-        @map = new google.maps.Map(@canvas_view.map_div[0], map_options)
-        google.maps.event.addListener(@map, 'bounds_changed', @bounds_change)
+        @map = new maps.Map(@canvas_view.map_div[0], map_options)
+        maps.event.addListener(@map, 'bounds_changed', @bounds_change)
+
+      if not window._bokeh_gmap_loads?
+        window._bokeh_gmap_loads = []
 
       if window.google? and window.google.maps?
         _.defer(build_map)
+
+      else if window._bokeh_gmap_callback?
+        window._bokeh_gmap_loads.push(build_map)
+
       else
-        window['_bokeh_first_gmap_load'] = build_map
+        window._bokeh_gmap_loads.push(build_map)
+        window._bokeh_gmap_callback = () ->
+          _.each(window._bokeh_gmap_loads, _.defer)
         script = document.createElement('script');
         script.type = 'text/javascript';
-        script.src = 'https://maps.googleapis.com/maps/api/js?v=3.exp&sensor=false&callback=_bokeh_first_gmap_load';
+        script.src = 'https://maps.googleapis.com/maps/api/js?v=3.exp&sensor=false&callback=_bokeh_gmap_callback';
         document.body.appendChild(script);
 
-    # used as callback, need fat arrow
     bounds_change: () =>
       bds = @map.getBounds()
       ne = bds.getNorthEast()
       sw = bds.getSouthWest()
       @x_range.set({start: sw.lng(), end: ne.lng(), silent:true})
-      @y_range.set({start: sw.lat(), end: ne.lat()})
+      @y_range.set({start: sw.lat(), end: ne.lat(), silent:true})
       if not @initial_range_info?
         @initial_range_info = {
           xr: { start: @x_range.get('start'), end: @x_range.get('end') }
           yr: { start: @y_range.get('start'), end: @y_range.get('end') }
         }
+      @render()
 
-    _map_hook: () ->
-      iw = @frame.get('width')
-      ih = @frame.get('height')
-      top = @frame.get('bottom')  # TODO (bev) view/screen
-      left = @frame.get('left')
+    _map_hook: (ctx, frame_box) ->
+      [left, top, width, height] = frame_box
 
       @canvas_view.map_div.attr("style", "top: #{top}px; left: #{left}px;")
-      @canvas_view.map_div.width("#{iw}px").height("#{ih}px")
+      @canvas_view.map_div.width("#{width}px").height("#{height}px")
 
     _paint_empty: (ctx, frame_box) ->
       ow = @canvas.get('width')
@@ -142,17 +158,17 @@ define [
       'min_border_right'
     ]
 
-    defaults: () ->
-      return _.extend(super(), {
+    defaults: ->
+      return _.extend {}, super(), {
         title: 'GMapPlot'
-      })
+      }
 
-    display_defaults: () ->
-      return _.extend(super(), {
-        border_fill: "#eee",
-      })
+    display_defaults: ->
+      return _.extend {}, super(), {
+        border_fill: "#fff",
+      }
 
-  class GMapPlots extends Backbone.Collection
+  class GMapPlots extends Collection
      model: GMapPlot
 
   return {

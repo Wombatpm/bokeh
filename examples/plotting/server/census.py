@@ -1,35 +1,25 @@
-from bokeh.plotting import square, output_server, show
-from bokeh.objects import ServerDataSource
+from bokeh.plotting import figure, output_server, show
+from bokeh.models import ServerDataSource
 import bokeh.transforms.ar_downsample as ar
-
-"""
-In order to run this example, you have to execute
-./bokeh-server -D remotedata
-
-the remote data directory in the bokeh checkout has the sample data for this example
-
-In addition, you must install ArrayManagement from this branch (soon to be master)
-https://github.com/ContinuumIO/ArrayManagement
-"""
-
+from blaze.server.client import Client
+from blaze import Data
 output_server("Census")
 # 2010 US Census tracts
-source = ServerDataSource(data_url="/defaultuser/CensusTracts.hdf5", owner_username="defaultuser")
-plot = square(
-        'LON', 'LAT',
-        source=source,
-        plot_width=600,
-        plot_height=400,
-        title="Census Tracts")
 
-ar.replot(plot, palette=["Reds-9"], reserve_val=0, points=True)
+c = Client('http://localhost:5006')
+d = Data(c)
+source = ServerDataSource()
+source.from_blaze(d.census, local=True)
 
-ar.replot(plot,
-        shader=ar.Cuberoot() + ar.InterpolateColor(low=(255, 200, 200)),
-        points=True,
-        title="Census Tracts (Server Colors)")
+plot = figure()
+arplot = plot.square(
+            'LON', 'LAT',
+            source=source,
+            plot_width=600,
+            plot_height=400,
+            title="Census Tracts")
 
-colors = ["#C6DBEF", "#9ECAE1", "#6BAED6", "#4292C6", "#2171B5", "#08519C", "#08306B"]
-ar.replot(plot, shader=ar.Cuberoot() + ar.Spread(factor=2) + ar.Contour(levels=len(colors)), line_color=colors, points=True, title="Census (Contours)")
-
-show()
+ar.heatmap(arplot, palette="Reds9", reserve_val=0, points=True, client_color=True, title="Census Tracts (Client Colors)")
+ar.heatmap(arplot, low=(255, 200, 200), points=True, title="Census Tracts (Server Colors)")
+ar.contours(arplot, title="ISO Contours")
+show(plot)

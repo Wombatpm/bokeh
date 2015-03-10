@@ -1,11 +1,20 @@
 More Information
 ================
 
+.. toctree::
+    :glob:
+    :hidden:
+
+    solutions/gallery/*
+
+
 For the full documentation, see `http://bokeh.pydata.org <http://bokeh.pydata.org>`_.
 
-To see the Bokeh source code, visit the GitHub repository: `https://github.com/ContinuumIO/bokeh <https://github.com/ContinuumIO/bokeh>`_
+For questions and technical assistance, come join the `bokeh users mailing list <https://groups.google.com/a/continuum.io/forum/#!forum/bokeh>`_.
 
-Be sure to follow us on Twitter `@bokehplots <http://twitter.com/BokehPlots>`_!
+To see the Bokeh source code, visit the GitHub repository: `https://github.com/bokeh/bokeh <https://github.com/bokeh/bokeh>`_
+
+Be sure to follow us on Twitter `@bokehplots <http://twitter.com/BokehPlots>`_, as well as on `Vine <https://vine.co/bokehplots>`_, and `Youtube <https://www.youtube.com/channel/UCK0rSk29mmg4UT4bIOvPYhw>`_!
 
 .. _tutorial_contact:
 
@@ -36,4 +45,4 @@ Thanks
 Bokeh is developed with funding from `DARPA <http://www.darpa.mil>`_'s
 `XDATA <http://www.darpa.mil/Our_Work/I2O/Programs/XDATA.aspx>`_ program.
 
-Additionally, many thanks to `all of the Bokeh Github contributors <https://github.com/ContinuumIO/bokeh/graphs/contributors>`_.
+Additionally, many thanks to `all of the Bokeh Github contributors <https://github.com/bokeh/bokeh/graphs/contributors>`_.

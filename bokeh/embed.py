@@ -11,6 +11,8 @@ these different cases.
 
 '''
 
+from __future__ import absolute_import
+
 import uuid
 
 from .protocol import serialize_json
@@ -19,7 +21,7 @@ from .templates import (
     AUTOLOAD, AUTOLOAD_SERVER, AUTOLOAD_STATIC, FILE,
     NOTEBOOK_DIV, PLOT_DIV, PLOT_JS, PLOT_SCRIPT, RESOURCES
 )
-from .utils import encode_utf8
+from .util.string import encode_utf8
 
 def components(plot_object, resources):
     ''' Return HTML components to embed a Bokeh plot.
@@ -38,7 +40,7 @@ def components(plot_object, resources):
         (script, div) : UTF-8 encoded
 
     '''
-    ref = plot_object.get_ref()
+    ref = plot_object.ref
     elementid = str(uuid.uuid4())
 
     js = PLOT_JS.render(
@@ -72,7 +74,7 @@ def notebook_div(plot_object):
               already been executed.
 
     '''
-    ref = plot_object.get_ref()
+    ref = plot_object.ref
     resources = Resources()
     elementid = str(uuid.uuid4())
 
@@ -199,6 +201,37 @@ def autoload_server(plot_object, session):
         docid =  session.docid,
         docapikey = session.apikey,
         loglevel = resources.log_level,
+    )
+
+    return encode_utf8(tag)
+
+def autoload_server(plot_object, session, public=False):
+    ''' Return a script tag that can be used to embed Bokeh Plots from
+    a Bokeh Server.
+
+    The data for the plot is stored on the Bokeh Server.
+
+    Args:
+        plot_object (PlotObject) :
+        session (session) :
+
+    Returns:
+        tag :
+            a ``<script>`` tag that will execute an autoload script
+            loaded from the Bokeh Server
+
+    '''
+    elementid = str(uuid.uuid4())
+    resources = Resources(root_url=session.root_url, mode="server")
+    tag = AUTOLOAD_SERVER.render(
+        src_path = resources._autoload_path(elementid),
+        elementid = elementid,
+        modelid = plot_object._id,
+        root_url = resources.root_url,
+        docid =  session.docid,
+        docapikey = session.apikey,
+        loglevel = resources.log_level,
+        public = public
     )
 
     return encode_utf8(tag)

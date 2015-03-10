@@ -1,23 +1,28 @@
-import uuid
-import json
-import threading
+from __future__ import absolute_import
+
 import logging
+log = logging.getLogger(__name__)
+
+import threading
+import uuid
 
 from tornado import websocket, ioloop
 from tornado.web import Application
 from tornado.httpserver import HTTPServer
 
-from .zmqsub import Subscriber
+from bokeh import protocol
 
-from .. import  protocol
 from .wsmanager import WebSocketManager
-
-log = logging.getLogger(__name__)
+from .zmqsub import Subscriber
 
 class WebSocketHandler(websocket.WebSocketHandler):
     @property
     def manager(self):
         return self.application.wsmanager
+
+    #accept all domains for now.. maybe rethink this later?
+    def check_origin(self, origin):
+        return True
 
     def open(self):
         ## TODO - set client id to continuum client id
@@ -40,7 +45,7 @@ class WebSocketHandler(websocket.WebSocketHandler):
                 )
                 self.write_message(topic + ":" + msg)
             else:
-                msg = protocol.serialize_web(protcol.error_obj('unauthorized'))
+                msg = protocol.serialize_web(protocol.error_obj('unauthorized'))
                 self.write_message(topic + ":" + msg)
 
 

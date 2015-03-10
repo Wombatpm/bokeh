@@ -1,4 +1,3 @@
-
 define [
   "underscore",
   "renderer/properties",
@@ -11,16 +10,14 @@ define [
     _properties: ['line']
 
     _map_data: () ->
-      [@sx, @sy] = @plot_view.map_to_screen(@x, @glyph_props.x.units, @y, @glyph_props.y.units)
+      [@sx, @sy] = @renderer.map_to_screen(@x, @glyph.x.units, @y, @glyph.y.units)
 
-    _render: (ctx, indices, glyph_props) ->
-
+    _render: (ctx, indices) ->
       drawing = false
-      glyph_props.line_properties.set(ctx, glyph_props)
+      @props.line.set(ctx, @props)
 
       for i in indices
-
-        if isNaN(@sx[i] + @sy[i]) and drawing
+        if !isFinite(@sx[i] + @sy[i]) and drawing
           ctx.stroke()
           ctx.beginPath()
           drawing = false
@@ -41,20 +38,16 @@ define [
 
   class Line extends Glyph.Model
     default_view: LineView
-    type: 'Glyph'
+    type: 'Line'
 
-    display_defaults: () ->
-      return _.extend(super(), {
-        line_color: 'red'
-        line_width: 1
-        line_alpha: 1.0
-        line_join: 'miter'
-        line_cap: 'butt'
-        line_dash: []
-        line_dash_offset: 0
-      })
+    display_defaults: ->
+      return _.extend {}, super(), @line_defaults
+
+  class Lines extends Glyph.Collection
+    model: Line
 
   return {
-    "Model": Line,
-    "View": LineView,
+    Model: Line
+    View: LineView
+    Collection: new Lines()
   }

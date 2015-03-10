@@ -1,30 +1,15 @@
 define [
-  "common/continuum_view"
-  "backbone",
-  "common/has_parent",
-], (continuum_view, Backbone, HasParent) ->
-  class EncodeView extends continuum_view.View
-    attributes:
-      class: "EncodeView"
+  "common/collection",
+  "./transform",
+], (Collection, Transform) ->
 
-    initialize: (options) ->
-      super(options)
-      @render_init()
+  class Encode extends Transform
+    type: "Encode"
 
-    delegateEvents: (events) ->
-      super(events)
-      "pass"
+  class Encodes extends Collection
+    model: Encode
 
-    render_init: () ->
-      @$el.html("")
-  
-  class Encode extends HasParent
-    type : "Encode"
-    default_view: EncodeView
-
-  class Encodes extends Backbone.Collection
-    model : Encode
   return {
-    "Model" : Encode 
-    "Collection" : new Encodes()
+    Model: Encode
+    Collection: new Encodes()
   }

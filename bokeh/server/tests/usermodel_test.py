@@ -1,25 +1,20 @@
+from __future__ import absolute_import
+
 from . import test_utils
 from .. import models
 from ..app import bokeh_app
 from ..models import user
-from ...tests.test_utils import skipIfPy3, skipIfPyPy
-
 
 class TestUser(test_utils.BokehServerTestCase):
     def setUp(self):
         super(TestUser, self).setUp()
         self.client = bokeh_app.servermodel_storage
 
-    @skipIfPy3("gevent does not work in py3.")
-    @skipIfPyPy("gevent requires pypycore and pypy-hacks branch of gevent.")
     def test_cant_create_twice(self):
-        model = user.new_user(self.client, 'test@test.com', 'mypassword',
-                              docs=[1, 2, 3])
+        user.new_user(self.client, 'test@test.com', 'mypassword', docs=[1, 2, 3])
         self.assertRaises(models.UnauthorizedException, user.new_user,
                           self.client, 'test@test.com', 'mypassword')
 
-    @skipIfPy3("gevent does not work in py3.")
-    @skipIfPyPy("gevent requires pypycore and pypy-hacks branch of gevent.")
     def test_auth_user(self):
         self.assertRaises(models.UnauthorizedException,
                           user.auth_user,
@@ -29,5 +24,3 @@ class TestUser(test_utils.BokehServerTestCase):
         model = user.auth_user(self.client, 'test@test.com', 'mypassword')
         self.assertRaises(models.UnauthorizedException, user.auth_user,
                           self.client, 'test@test.com', 'wrongpassword')
-
-

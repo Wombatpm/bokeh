@@ -4,19 +4,21 @@
 #
 # Powered by the Bokeh Development Team.
 #
-# The full license is in the file LICENCE.txt, distributed with this software.
+# The full license is in the file LICENSE.txt, distributed with this software.
 #-----------------------------------------------------------------------------
 
 #-----------------------------------------------------------------------------
 # Imports
 #-----------------------------------------------------------------------------
 
+from __future__ import absolute_import
+
 import numpy as np
 
 from itertools import cycle, islice
 from scipy import interpolate, signal
 
-from .objects import Glyph
+from .models import GlyphRenderer
 
 #-----------------------------------------------------------------------------
 # Classes and functions
@@ -88,7 +90,7 @@ def get_props_cycled(col, prop, fx=lambda x: x):
 
 def is_ax_end(r):
     "Check if the 'name' (if it exists) in the Glyph's datasource is 'ax_end'"
-    if isinstance(r, Glyph):
+    if isinstance(r, GlyphRenderer):
         try:
             if r.data_source.data["name"] == "ax_end":
                 return True

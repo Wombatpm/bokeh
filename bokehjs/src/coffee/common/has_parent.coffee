@@ -39,14 +39,10 @@ define [
     initialize: (attrs, options) ->
       super(attrs, options)
       @_parent = HasProperties.prototype.get.apply(this, ['parent'])
-      @_display_defaults = {}
-      if @display_defaults?
-        if _.isFunction(@display_defaults)
-          @_display_defaults = @display_defaults()
-        else
-          @_display_defaults = @display_defaults
 
     get: (attr) ->
+      if not @_display_defaults
+        @_display_defaults = @display_defaults()
       if attr == 'parent'
         return @_parent
       val = super(attr)
@@ -58,6 +54,7 @@ define [
           return val
       return @_display_defaults[attr]
 
-    display_defaults: {}
+    display_defaults: () ->
+      return {}
 
   return HasParent

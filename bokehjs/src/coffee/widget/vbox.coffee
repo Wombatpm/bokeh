@@ -2,9 +2,9 @@ define [
   "common/has_parent",
   "common/continuum_view",
   "common/build_views"
-  "backbone"
-], (HasParent, continuum_view, build_views, Backbone) ->
-  ContinuumView = continuum_view.View
+  "common/collection"
+], (HasParent, ContinuumView, build_views, Collection) ->
+
   class VBoxView extends ContinuumView
     tag : "div"
     attributes:
@@ -20,15 +20,22 @@ define [
       for own key, val of @views
         val.$el.detach()
       @$el.empty()
+      width = @mget("width")
+      if width? then @$el.css(width: width + "px")
+      height = @mget("height")
+      if height? then @$el.css(height: height + "px")
       for child in children
         @$el.append(@views[child.id].$el)
 
   class VBox extends HasParent
     type : "VBox"
     default_view : VBoxView
-    defaults : () ->
-      return {'children' : []}
-  class VBoxes extends Backbone.Collection
+    defaults: ->
+      return _.extend {}, super(), {
+        children: []
+      }
+
+  class VBoxes extends Collection
     model : VBox
   vboxes = new VBoxes()
   return {

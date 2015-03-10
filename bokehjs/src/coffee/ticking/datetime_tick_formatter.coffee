@@ -1,18 +1,21 @@
 define [
-  "underscore",
-  "backbone",
+  "underscore"
+  "common/collection"
+  "sprintf"
+  "timezone"
   "common/has_properties"
-  "sprintf",
-  "timezone",
-], (_, Backbone, HasProperties, sprintf, tz) ->
+  "common/logging"
+], (_, Collection, SPrintf, tz, HasProperties, Logging) ->
+
+  logger = Logging.logger
 
   _us = (t) ->
-    return sprintf("%3dus", Math.floor((t % 1) * 1000))
+    return SPrintf.sprintf("%3dus", Math.floor((t % 1) * 1000))
 
   _ms_dot_us = (t) ->
     ms = Math.floor(((t / 1000) % 1) * 1000)
     us = Math.floor((t % 1) * 1000)
-    return sprintf("%3d.%3dms", ms, us)
+    return SPrintf.sprintf("%3d.%3dms", ms, us)
 
   _two_digit_year = (t) ->
     # Round to the nearest Jan 1, roughly.
@@ -20,7 +23,7 @@ define [
     year = dt.getFullYear()
     if dt.getMonth() >= 7
         year += 1
-    return sprintf("'%02d", (year % 100))
+    return SPrintf.sprintf("'%02d", (year % 100))
 
   _four_digit_year = (t) ->
     # Round to the nearest Jan 1, roughly.
@@ -28,7 +31,7 @@ define [
     year = dt.getFullYear()
     if dt.getMonth() >= 7
         year += 1
-    return sprintf("%d", year)
+    return SPrintf.sprintf("%d", year)
 
   _array = (t) ->
     return tz(t, "%Y %m %d %H %M %S").split(/\s+/).map( (e) -> return parseInt(e, 10) );
@@ -171,8 +174,8 @@ define [
           tm = _array(t)
           s = _strftime(t, format)
         catch error
-          console.log error
-          console.log("Unable to convert tick for timestamp " + t)
+          logger.warn("unable to format tick for timestamp value #{t}")
+          logger.warn(" - #{error}")
           labels.push("ERR")
           continue
 
@@ -204,18 +207,17 @@ define [
             # A label such as '000ms' should leave one zero.
             ss = '0' + ss
           labels.push(ss)
-#           console.log("  #{t} -> #{new Date(t)} : #{tm} : #{s} -> #{ss}")
         else
           labels.push(s)
 
       return labels
 
-    defaults: () ->
-      _.extend(super(), {
+    defaults: ->
+      return _.extend {}, super(), {
         formats: {}
-      })
+      }
 
-  class DatetimeTickFormatters extends Backbone.Collection
+  class DatetimeTickFormatters extends Collection
     model: DatetimeTickFormatter
 
   return {

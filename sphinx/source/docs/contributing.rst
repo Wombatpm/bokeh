@@ -1,12 +1,12 @@
 
 Contributing
-============
+############
 
 We are always looking for contributors, and want grow the developer/contributor
 base for Bokeh.
 
 If you are the author of an existing plotting library and would like your
-interfaces to generate output that can be rendered by the :ref:`bokehjs`
+interfaces to generate output that can be rendered by the :ref:`devguide_bokehjs`
 runtime, take a look through the :ref:`devguide` and we'd love to help you out.
 
 If you have a data API or other web-based tool that you think would be great
@@ -32,6 +32,23 @@ Specific areas we'd like to get help on:
 * Designs & styling
 * Canvas performance optimization
 * Connectors to various data APIs (public data or even commercial software suites)
+
+Core Team
+=========
+
+The Bokeh core team comprises:
+
+* Damián Avila
+* Joseph Cottam
+* Karan Dodia
+* Christine Doig
+* Mateusz Paprocki
+* Fabio Pliger
+* Hugo Shi
+* Bryan Van de Ven
+* Peter Wang
+
+A full list of contributors may be viewed on the `GitHub Contributors Page <https://github.com/bokeh/bokeh/graphs/contributors>`_.
 
 
 

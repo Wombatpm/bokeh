@@ -4,9 +4,9 @@ class Population(object):
     location = "World"
 
     def __init__(self):
-        from bokeh.objects import ColumnDataSource
         from bokeh.document import Document
         from bokeh.session import Session
+        from bokeh.models import ColumnDataSource
         from bokeh.sampledata.population import load_population
 
         self.document = Document()
@@ -24,38 +24,37 @@ class Population(object):
         self.update_pyramid()
 
     def pyramid_plot(self):
-        from bokeh.objects import (Plot, DataRange1d, LinearAxis, Grid, Glyph,
-                                   Legend, SingleIntervalTicker)
-        from bokeh.glyphs import Quad
+        from bokeh.models import (
+            Plot, DataRange1d, LinearAxis, Grid, Legend,
+            SingleIntervalTicker
+        )
+        from bokeh.models.glyphs import Quad
 
         xdr = DataRange1d(sources=[self.source_pyramid.columns("male"),
                           self.source_pyramid.columns("female")])
         ydr = DataRange1d(sources=[self.source_pyramid.columns("groups")])
 
-        self.plot = Plot(title=None, x_range=xdr, y_range=ydr, plot_width=600, plot_height=600)
+        self.plot = Plot(title=None, x_range=xdr, y_range=ydr,
+                         plot_width=600, plot_height=600)
 
-        xaxis = LinearAxis(plot=self.plot)
-        self.plot.below.append(xaxis)
-        yaxis = LinearAxis(plot=self.plot, ticker=SingleIntervalTicker(interval=5))
-        self.plot.left.append(yaxis)
+        xaxis = LinearAxis()
+        self.plot.add_layout(xaxis, 'below')
+        yaxis = LinearAxis(ticker=SingleIntervalTicker(interval=5))
+        self.plot.add_layout(yaxis, 'left')
 
-        xgrid = Grid(plot=self.plot, dimension=0, ticker=xaxis.ticker)
-        ygrid = Grid(plot=self.plot, dimension=1, ticker=yaxis.ticker)
+        self.plot.add_layout(Grid(dimension=0, ticker=xaxis.ticker))
+        self.plot.add_layout(Grid(dimension=1, ticker=yaxis.ticker))
 
-        male_quad = Quad(left="male", right=0, bottom="groups", top="shifted", fill_color="blue")
-        male_quad_glyph = Glyph(data_source=self.source_pyramid,
-                                xdata_range=xdr, ydata_range=ydr, glyph=male_quad)
-        self.plot.renderers.append(male_quad_glyph)
+        male_quad = Quad(left="male", right=0, bottom="groups", top="shifted",
+                         fill_color="#3B8686")
+        male_quad_glyph = self.plot.add_glyph(self.source_pyramid, male_quad)
 
         female_quad = Quad(left=0, right="female", bottom="groups", top="shifted",
-                           fill_color="violet")
-        female_quad_glyph = Glyph(data_source=self.source_pyramid,
-                                  xdata_range=xdr, ydata_range=ydr, glyph=female_quad)
-        self.plot.renderers.append(female_quad_glyph)
+                           fill_color="#CFF09E")
+        female_quad_glyph = self.plot.add_glyph(self.source_pyramid, female_quad)
 
-        legend = Legend(plot=self.plot, legends=dict(Male=[male_quad_glyph],
-                        Female=[female_quad_glyph]))
-        self.plot.renderers.append(legend)
+        self.plot.add_layout(Legend(legends=dict(Male=[male_quad_glyph],
+                                                 Female=[female_quad_glyph])))
 
     def on_year_change(self, obj, attr, old, new):
         self.year = int(new)
@@ -66,7 +65,7 @@ class Population(object):
         self.update_pyramid()
 
     def create_layout(self):
-        from bokeh.widgetobjects import Select, HBox, VBox
+        from bokeh.models.widgets import Select, HBox, VBox
 
         years = list(map(str, sorted(self.df.Year.unique())))
         locations = sorted(self.df.Location.unique())
@@ -77,8 +76,8 @@ class Population(object):
         year_select.on_change('value', self.on_year_change)
         location_select.on_change('value', self.on_location_change)
 
-        controls = HBox(children=[year_select, location_select])
-        self.layout = VBox(children=[controls, self.plot])
+        controls = HBox(year_select, location_select)
+        self.layout = VBox(controls, self.plot)
 
     def update_pyramid(self):
         pyramid = self.df[(self.df.Location == self.location) & (self.df.Year == self.year)]
@@ -124,7 +123,7 @@ with open("population_embed.html", "w+") as f:
 print("""
 To view this example, run
 
-    python -m SimpleHTTPServer
+    python -m SimpleHTTPServer (or http.server on python 3)
 
 in this directory, then navigate to
 
@@ -133,7 +132,7 @@ in this directory, then navigate to
 
 import time
 
-link = pop.session.object_link(pop.document._plotcontext)
+link = pop.session.object_link(pop.document.context)
 print("""You can also go to
 
     %s
@@ -143,6 +142,6 @@ to see the plots on the Bokeh server directly""" % link)
 try:
     while True:
         pop.session.load_document(pop.document)
-        time.sleep(0.5)
+        time.sleep(0.1)
 except KeyboardInterrupt:
     print()

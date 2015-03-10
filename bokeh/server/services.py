@@ -1,9 +1,10 @@
-import subprocess
-import os
-from os.path import join, dirname
-import sys
+from __future__ import absolute_import
+
 import json
+import os
 import signal
+import subprocess
+import sys
 
 class ManagedProcess(object):
     def __init__(self, args, name, pidfilename,

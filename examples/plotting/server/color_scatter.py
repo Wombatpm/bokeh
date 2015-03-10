@@ -3,6 +3,7 @@
 
 import numpy as np
 from six.moves import zip
+
 from bokeh.plotting import *
 
 N = 4000
@@ -14,8 +15,9 @@ colors = ["#%02x%02x%02x" % (r, g, 150) for r, g in zip(np.floor(50+2*x), np.flo
 
 output_server("color_scatter")
 
-scatter(x,y, radius=radii, radius_units="data",
-        fill_color=colors, fill_alpha=0.6,
-        line_color=None, tools="select,pan,wheel_zoom,box_zoom,reset,previewsave", name="color_scatter_example")
+TOOLS="resize,crosshair,pan,wheel_zoom,box_zoom,reset,tap,previewsave,box_select,poly_select,lasso_select"
 
-show()  # open a browser
+p = figure(tools=TOOLS)
+p.scatter(x,y, radius=radii, fill_color=colors, fill_alpha=0.6, line_color=None)
+
+show(p)  # open a browser

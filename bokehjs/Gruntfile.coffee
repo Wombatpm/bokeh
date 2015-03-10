@@ -48,21 +48,6 @@ module.exports = (grunt) ->
           src: ['**/*']
           dest : 'build/js/vendor'
         ]
-      release:
-        files: [
-            expand: true
-            cwd: 'build/js'
-            src: ['*.js']
-            dest: 'release/js'
-          ,
-            expand: true
-            cwd: 'build/css'
-            src: ['*.css']
-            dest: 'release/css'
-        ]
-      spectrogram:
-        src: 'build/js/bokeh.js'
-        dest: 'build/demo/spectrogram/static/bokeh.js'
 
     clean:
       all : ['build'],
@@ -79,6 +64,8 @@ module.exports = (grunt) ->
           dest: 'build/css',   # destination path prefix
           ext: '.css',         # dest filepaths will have this extension
         }]
+    lesslint:
+      src: ['src/less/*.less']
 
     coffee:
       compile:
@@ -106,10 +93,6 @@ module.exports = (grunt) ->
         ext: '.js'             # file extension for compiled files
         options:
           sourceMap : true
-      spectrogram:
-        files: {
-          'build/demo/spectrogram/static/spectrogram.js': 'demo/spectrogram/coffee/spectrogram.coffee'
-        }
 
     requirejs:
       options:
@@ -120,7 +103,6 @@ module.exports = (grunt) ->
         include: ['underscore', 'main']
         fileExclusionRegExp: /^test/
         wrapShim: true
-        preserveLicenseComments: false
         wrap:
           startFile: 'src/js/_start.js.frag'
           endFile: 'src/js/_end.js.frag'
@@ -218,11 +200,13 @@ module.exports = (grunt) ->
   grunt.loadNpmTasks("grunt-contrib-connect")
   grunt.loadNpmTasks("grunt-eco")
   grunt.loadNpmTasks("grunt-groc")
+  grunt.loadNpmTasks('grunt-lesslint')
 
   grunt.registerTask("default",   ["build", "test"])
   grunt.registerTask("buildcopy", ["copy:template", "copy:test", "copy:demo", "copy:vendor"]) # better way??
   grunt.registerTask("build",     ["coffee", "less", "buildcopy", "eco"])
-  grunt.registerTask("deploy",    ["build",  "requirejs", "cssmin", "copy:spectrogram"])
+  grunt.registerTask("deploy",    ["build",  "requirejs", "cssmin"])
   grunt.registerTask("test",      ["build", "connect", "qunit"])
+  grunt.registerTask("fast_test", ["copy:test", "coffee:test", "connect", "qunit"])
   grunt.registerTask("serve",     ["connect:server:keepalive"])
   grunt.registerTask("release",   ["deploy", "copy:release"])

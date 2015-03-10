@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 import unittest
 
 from mock import patch, Mock
@@ -6,11 +7,11 @@ from six.moves import xrange
 import copy
 
 def large_plot(n):
-    from bokeh.objects import (Plot, PlotContext, LinearAxis, Grid, Glyph,
+    from bokeh.models import (Plot, PlotContext, LinearAxis, Grid, GlyphRenderer,
         ColumnDataSource, DataRange1d, PanTool, WheelZoomTool, BoxZoomTool,
         BoxSelectTool, BoxSelectionOverlay, ResizeTool, PreviewSaveTool,
         ResetTool)
-    from bokeh.glyphs import Line
+    from bokeh.models.glyphs import Line
 
     context = PlotContext()
     objects = set([context])
@@ -25,7 +26,8 @@ def large_plot(n):
         xgrid = Grid(plot=plot, dimension=0)
         ygrid = Grid(plot=plot, dimension=1)
         tickers = [xaxis.ticker, xaxis.formatter, yaxis.ticker, yaxis.formatter]
-        renderer = Glyph(data_source=source, xdata_range=xdr, ydata_range=ydr, glyph=Line(x='x', y='y'))
+        glyph = Line(x='x', y='y')
+        renderer = GlyphRenderer(data_source=source, glyph=glyph)
         plot.renderers.append(renderer)
         pan = PanTool(plot=plot)
         wheel_zoom = WheelZoomTool(plot=plot)
@@ -38,7 +40,7 @@ def large_plot(n):
         tools = [pan, wheel_zoom, box_zoom, box_select, box_selection, resize, previewsave, reset]
         plot.tools.append(tools)
         context.children.append(plot)
-        objects |= set([source, xdr, ydr, plot, xaxis, yaxis, xgrid, ygrid, renderer] + tickers + tools)
+        objects |= set([source, xdr, ydr, plot, xaxis, yaxis, xgrid, ygrid, renderer, glyph, plot.tool_events] + tickers + tools)
 
     return context, objects
 
@@ -69,106 +71,7 @@ class TestViewable(unittest.TestCase):
         self.assertTrue(hasattr(tclass, 'foo'))
         self.assertRaises(KeyError, self.viewable.get_class, 'Imaginary_Class')
 
-
-class Test_UseSession(unittest.TestCase):
-
-    def setUp(self):
-        from bokeh.plot_object import usesession
-        self.usesession = usesession
-
-    def test_transparent(self):
-        class test_class():
-            session = None
-
-            @self.usesession
-            def test_func(self, session=None):
-                return session
-        tc = test_class()
-        self.assertEqual(tc.test_func.__name__, 'test_func')
-
-    def test_withkw(self):
-        class test_class():
-            session = None
-
-            @self.usesession
-            def test_func(self, session=None):
-                return session
-        tc = test_class()
-        self.assertEqual(tc.test_func(session='not_default'), 'not_default')
-
-    def test_withoutkw(self):
-        class test_class():
-            session = None
-
-            @self.usesession
-            def test_func(self, session=None):
-                return session
-        tc = test_class()
-        self.assertRaises(RuntimeError, tc.test_func)
-        tc.session = 'something'
-        self.assertEqual(tc.test_func(), 'something')
-
-    def test_without_session_attr(self):
-        class test_class():
-
-            @self.usesession
-            def test_func(self, session=None):
-                return session
-        tc = test_class()
-        self.assertEqual(tc.test_func(session='not_default'), 'not_default')
-
-
-class TestJsonapply(unittest.TestCase):
-
-    def test_jsonapply(self):
-        from bokeh.plot_object import json_apply
-
-        def check_func(frag):
-            if frag == 'goal':
-                return True
-
-        def func(frag):
-            return frag + 'ed'
-
-        result = json_apply('goal', check_func, func)
-        self.assertEqual(result, 'goaled')
-        result = json_apply([[['goal', 'junk'], 'junk', 'junk']], check_func, func)
-        self.assertEqual(result, [[['goaled', 'junk'], 'junk', 'junk']])
-        result = json_apply({'1': 'goal', 1.5: {'2': 'goal', '3': 'junk'}}, check_func, func)
-        self.assertEqual(result, {'1': 'goaled', 1.5: {'2': 'goaled', '3': 'junk'}})
-
-
-class TestResolveJson(unittest.TestCase):
-
-    @patch('bokeh.plot_object.logging')
-    def test_resolve_json(self, mock_logging):
-        from bokeh.plot_object import resolve_json
-
-        models = {'foo': 'success', 'otherfoo': 'othersuccess'}
-        fragment = [{'id': 'foo', 'type': 'atype'}, {'id': 'foo', 'type': 'atype'}, {'id': 'otherfoo', 'type': 'othertype'}]
-        self.assertEqual(resolve_json(fragment, models), ['success', 'success', 'othersuccess'])
-        fragment.append({'id': 'notfoo', 'type': 'badtype'})
-        self.assertEqual(resolve_json(fragment, models), ['success', 'success', 'othersuccess', None])
-        self.assertTrue(mock_logging.error.called)
-        self.assertTrue('badtype' in repr(mock_logging.error.call_args))
-
-
 class TestCollectPlotObjects(unittest.TestCase):
-
-    def test_references(self):
-        from bokeh.plot_object import PlotObject
-        pobject1 = PlotObject()
-        pobject2 = PlotObject()
-        pobject3 = PlotObject()
-        pobject4 = PlotObject()
-        pobject1.pobject2 = pobject2
-        pobject1.pobject3 = pobject3
-        pobject3.pobject4 = pobject4
-        pobject1.properties_with_refs = Mock(return_value=['pobject2', 'pobject3'])
-        pobject3.properties_with_refs = Mock(return_value=['pobject4'])
-        resultset = set(pobject1.references())
-        expectedset = set([pobject1, pobject2, pobject3, pobject4])
-        self.assertEqual(resultset, expectedset)
 
     def test_references_large(self):
         context, objects = large_plot(500)
@@ -177,7 +80,7 @@ class TestCollectPlotObjects(unittest.TestCase):
 class TestPlotObject(unittest.TestCase):
 
     def setUp(self):
-        from bokeh.objects import PlotObject
+        from bokeh.models import PlotObject
         self.pObjectClass = PlotObject
 
     def test_init(self):
@@ -193,14 +96,12 @@ class TestPlotObject(unittest.TestCase):
 
         self.pObjectClass.setup_events = oldmethod
 
-    def test_get_ref(self):
+    def test_ref(self):
         testObject = self.pObjectClass(id='test_id')
-        self.assertEqual({'type': 'PlotObject', 'id': 'test_id'}, testObject.get_ref())
+        self.assertEqual({'type': 'PlotObject', 'id': 'test_id'}, testObject.ref)
 
     def test_load_json(self):
-        from bokeh.plot_object import PlotObject
-
-        cls = PlotObject.get_class("Plot")
+        cls = self.pObjectClass.get_class("Plot")
         obj = cls.load_json({'id': 'test_id', 'min_border': 100})
         self.assertEqual(obj._id, 'test_id')
         self.assertEqual(obj.title, '')
@@ -212,26 +113,25 @@ class TestPlotObject(unittest.TestCase):
         self.assertEqual(obj.min_border, 100)
 
     def test_references_by_ref_by_value(self):
-        from bokeh.objects import PlotObject
         from bokeh.properties import HasProps, Instance, Int
 
-        class T(PlotObject):
+        class T(self.pObjectClass):
             t = Int(0)
 
-        class Y(PlotObject):
+        class Y(self.pObjectClass):
             t1 = Instance(T)
 
         class Z1(HasProps):
             t2 = Instance(T)
 
-        class Z2(PlotObject):
+        class Z2(self.pObjectClass):
             t2 = Instance(T)
 
-        class X1(PlotObject):
+        class X1(self.pObjectClass):
             y = Instance(Y)
             z1 = Instance(Z1)
 
-        class X2(PlotObject):
+        class X2(self.pObjectClass):
             y = Instance(Y)
             z2 = Instance(Z2)
 
@@ -246,7 +146,6 @@ class TestPlotObject(unittest.TestCase):
         self.assertEqual(x2.references(), {t1, y, t2, z2, x2})
 
     def test_references_in_containers(self):
-        from bokeh.objects import PlotObject
         from bokeh.properties import Int, String, Instance, List, Tuple, Dict
 
         # XXX: can't use Y, because of:
@@ -254,10 +153,10 @@ class TestPlotObject(unittest.TestCase):
         # Warning: Duplicate __view_model__ declaration of 'Y' for class Y.
         #          Previous definition: <class 'bokeh.tests.test_objects.Y'>
 
-        class U(PlotObject):
+        class U(self.pObjectClass):
             a = Int
 
-        class V(PlotObject):
+        class V(self.pObjectClass):
             u1 = Instance(U)
             u2 = List(Instance(U))
             u3 = Tuple(Int, Instance(U))

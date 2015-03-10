@@ -1,9 +1,8 @@
-
 define [
   "underscore",
-  "backbone",
+  "common/collection",
   "range/range1d"
-], (_, Backbone, Range1d) ->
+], (_, Collection, Range1d) ->
 
   class DataRange1d extends Range1d.Model
     type: 'DataRange1d'
@@ -15,7 +14,7 @@ define [
         for colname in source['columns']
           columns.push(sourceobj.get_column(colname))
       columns = _.flatten(columns)
-      columns = _.filter(columns, (x) -> typeof(x) != "string")
+      columns = _.reject(columns, (x) -> _.isString(x))
       columns = _.reject(columns, (x) -> isNaN(x))
       [min, max] = [_.min(columns), _.max(columns)]
       if max != min
@@ -61,13 +60,13 @@ define [
       @add_dependencies('end', this, ['minmax', '_end'])
       super(attrs, options)
 
-    defaults: () ->
-      return {
+    defaults: ->
+      return _.extend {}, super(), {
         sources: []
         rangepadding: 0.1
       }
 
-  class DataRange1ds extends Backbone.Collection
+  class DataRange1ds extends Collection
     model: DataRange1d
 
   return {

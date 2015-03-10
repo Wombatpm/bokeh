@@ -1,30 +1,15 @@
 define [
-  "common/continuum_view"
-  "backbone",
-  "common/has_parent",
-], (continuum_view, Backbone, HasParent) ->
-  class InterpolateView extends continuum_view.View
-    attributes:
-      class: "InterpolateView"
+  "common/collection",
+  "./transform",
+], (Collection, Transform) ->
 
-    initialize: (options) ->
-      super(options)
-      @render_init()
+  class Interpolate extends Transform
+    type: "Interpolate"
 
-    delegateEvents: (events) ->
-      super(events)
-      "pass"
+  class Interpolates extends Collection
+    model: Interpolate
 
-    render_init: () ->
-      @$el.html("")
-  
-  class Interpolate extends HasParent
-    type : "Interpolate"
-    default_view: InterpolateView 
-  
-  class Interpolates extends Backbone.Collection
-    model : Interpolate
   return {
-    "Model" : Interpolate 
-    "Collection" : new Interpolates()
+    Model: Interpolate
+    Collection: new Interpolates()
   }

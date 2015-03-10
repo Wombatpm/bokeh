@@ -1,10 +1,15 @@
 define [
-  "common/base",
-  "common/socket",
-  "common/load_models",
-  "backbone",
+  "jquery"
+  "underscore"
+  "common/base"
+  "common/socket"
+  "common/load_models"
+  "common/logging"
+  "backbone"
   "common/has_properties"
-], (base, socket, load_models, Backbone, HasProperties) ->
+], ($, _, base, socket, load_models, Logging, Backbone, HasProperties) ->
+
+  logger = Logging.logger
 
   #not proud of this refactor... but we can make it better later
   Deferreds = {}
@@ -16,22 +21,30 @@ define [
   Deferreds._doc_requested = $.Deferred()
   Promises.doc_loaded = Deferreds._doc_loaded.promise()
   Promises.doc_requested = Deferreds._doc_requested.promise()
-  Promises.doc_promises = {};
+  Promises.doc_promises = {}
 
   # these get set out later
   exports.wswrapper = null
   exports.plotcontext = null
   exports.plotcontextview = null
   exports.Promises = Promises
-
+  copy_on_write_mapping = {}
   utility =
-    load_one_object_chain : (docid, objid) ->
+    load_one_object_chain : (docid, objid, is_public) ->
+      if is_public
+        if not copy_on_write_mapping[docid]
+          copy_on_write_mapping[docid] = _.uniqueId('temporary')
+        tempdocid = copy_on_write_mapping[docid]
+        key = "temporary-#{docid}"
+        headers = {}
+        headers[key] = tempdocid
+        $.ajaxSetup({'headers' : headers})
       HasProperties.prototype.sync = Backbone.sync
       resp = utility.make_websocket()
       resp = resp.then(() ->
         Config = require("common/base").Config
         url = "#{Config.prefix}bokeh/objinfo/#{docid}/#{objid}"
-        console.log(url)
+        logger.debug("load one object chain: #{url}")
         resp = $.get(url)
         return resp
       )
@@ -40,6 +53,8 @@ define [
         load_models(all_models)
         apikey = data['apikey']
         submodels(exports.wswrapper, "bokehplot:#{docid}", apikey)
+        if is_public
+          submodels(exports.wswrapper, "bokehplot:#{tempdocid}", null)
       )
       return resp
 
@@ -68,7 +83,7 @@ define [
       return promise
 
     load_doc: (docid) ->
-      resp = utility.make_websocket();
+      resp = utility.make_websocket()
       resp = resp.then(() ->
         Config = require("common/base").Config
         return $.get(Config.prefix + "bokeh/bokehinfo/#{docid}/", {})
@@ -117,7 +132,7 @@ define [
       if Promises.doc_requested.state() == "pending"
         Deferreds._doc_requested.resolve()
         $.get("#{protocol}://#{host}/bokeh/publicbokehinfo/#{docid}", {}, (data) ->
-          console.log('instatiate_doc_single, docid', docid)
+          logger.debug("instantiate_doc_single #{docid}")
           data = JSON.parse(data)
           load_models(data['all_models'])
           Deferreds._doc_loaded.resolve(data)
@@ -133,10 +148,10 @@ define [
     Config = require("common/base").Config
     if ws_conn_string
       Config.ws_conn_string = ws_conn_string
-      console.log('setting ws_conn_string to', Config.ws_conn_string)
+      logger.debug("setting ws_conn_string to: #{Config.ws_conn_string}")
     if prefix
       Config.prefix = prefix
-      console.log('setting prefix to', Config.prefix)
+      logger.debug("setting prefix to #{Config.prefix}")
     return null
 
   exports.utility = utility

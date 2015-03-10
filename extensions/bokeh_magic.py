@@ -16,7 +16,11 @@ from IPython.testing.skipdoctest import skip_doctest
 from IPython.core.magic_arguments import (argument, magic_arguments,
     parse_argstring)
 from IPython.core.error import UsageError
-from bokeh.plotting import (output_notebook, show, hold, figure)
+try:
+    from bokeh.plotting import (output_notebook, show, hold, figure)
+    old_bokeh = False
+except ImportError:
+    old_bokeh = True
 
 #-----------------------------------------------------------------------------
 # Classes and functions
@@ -27,17 +31,14 @@ from bokeh.plotting import (output_notebook, show, hold, figure)
 class BokehMagics(Magics):
     """Magic to embed Bokeh into the IPython notebook."""
 
-    ipyones = ['1.0.0', '1.1.1', '1.1.2', '1.2.0', '1.2.1']
-    ipytwos = ['2.0.0-dev', '2.0.0-b1', '2.0.0-wakari', '2.0.0', '2.1.0', '3.0.0-dev']
-    if IPython.__version__ in ipyones:
-        is_ipytwo = False
-    elif IPython.__version__ in ipytwos:
-        is_ipytwo = True
-    else:
-        message = """This version of IPython is not currently supported.
+    if old_bokeh:
+        raise DeprecationWarning("%bokeh magic is deprecated, "
+                                 "and will not work in versions > 0.7.1")
 
-Currently supported version are: %s and %s.""" % (', '.join(ipyones), ', '.join(ipytwos))
-        raise Exception(message)
+    if IPython.__version__.startswith("1"):
+        is_ipytwo = False
+    else:
+        is_ipytwo = True
 
     has_run = False
 

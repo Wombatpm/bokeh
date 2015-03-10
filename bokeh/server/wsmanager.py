@@ -1,10 +1,10 @@
-import uuid
-import atexit
-import logging
-from .. import  protocol
-from flask import request
+from __future__ import absolute_import
 
+import logging
 log = logging.getLogger(__name__)
+
+import atexit
+import uuid
 
 class MultiDictionary(object):
     def __init__(self):

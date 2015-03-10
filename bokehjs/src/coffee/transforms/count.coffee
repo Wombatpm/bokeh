@@ -1,30 +1,15 @@
 define [
-  "common/continuum_view"
-  "backbone",
-  "common/has_parent"
-], (continuum_view, Backbone, HasParent) ->
-  class CountView extends continuum_view.View
-    attributes:
-      class: "CountView"
+  "common/collection",
+  "./transform",
+], (Collection, Transform) ->
 
-    initialize: (options) ->
-      super(options)
-      @render_init()
+  class Count extends Transform
+    type: "Count"
 
-    delegateEvents: (events) ->
-      super(events)
-      "pass"
+  class Counts extends Collection
+    model: Count
 
-    render_init: () ->
-      @$el.html("")
-
-  class Count extends HasParent
-    type : "Count"
-    default_view: CountView
-  
-  class Counts extends Backbone.Collection
-    model : Count
   return {
-    "Model" : Count 
-    "Collection" : new Counts()
+    Model: Count
+    Collection: new Counts()
   }

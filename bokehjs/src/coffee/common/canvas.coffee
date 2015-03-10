@@ -1,12 +1,12 @@
 define [
-  "backbone",
+  "./collection",
   "kiwi",
   "./canvas_template"
   "./continuum_view",
   "./layout_box"
   "./logging"
   "./solver",
-], (Backbone, kiwi, canvas_template, ContinuumView, LayoutBox, Logging, Solver) ->
+], (Collection, kiwi, canvas_template, ContinuumView, LayoutBox, Logging, Solver) ->
 
   Expr = kiwi.Expression
   Constraint = kiwi.Constraint
@@ -14,15 +14,9 @@ define [
 
   logger = Logging.logger
 
-  class CanvasView extends ContinuumView.View
-
-    className: "bokeh plotview bokeh_canvas_wrapper"
-
+  class CanvasView extends ContinuumView
+    className: "bk-canvas-wrapper"
     template: canvas_template
-
-    events:
-      "mousemove": "_mousemove"
-      "mousedown": "_mousedown"
 
     initialize: (options) ->
       super(options)
@@ -36,8 +30,10 @@ define [
       # for compat, to be removed
       @canvas_wrapper = @$el
 
-      @canvas = @$('canvas.bokeh_canvas')
-      @map_div = @$('.bokeh_gmap') ? null
+      @canvas = @$('canvas.bk-canvas')
+      @canvas_events = @$('div.bk-canvas-events')
+      @canvas_overlay = @$('div.bk-canvas-overlays')
+      @map_div = @$('div.bk-canvas-map') ? null
 
       logger.debug("CanvasView initialized")
 
@@ -46,7 +42,6 @@ define [
       # should be configured with new bounds.
       if not @model.new_bounds and not force
         return
-
       @ctx = @canvas[0].getContext('2d')
 
       if @mget('use_hidpi')
@@ -63,14 +58,13 @@ define [
       width = @mget('width')
       height = @mget('height')
 
-      @canvas.width = width * @dpi_ratio
-      @canvas.height = height * @dpi_ratio
-
-      @$el.attr('style', "width:#{width}px; height:#{height}px")
-      @canvas.attr('style', "width:#{width}px;")
-      @canvas.attr('style', "height:#{height}px;")
+      @$el.attr('style', "z-index: 50; width:#{width}px; height:#{height}px")
+      @canvas.attr('style', "width:#{width}px;height:#{height}px")
       @canvas.attr('width', width*ratio).attr('height', height*ratio)
       @$el.attr("width", width).attr('height', height)
+
+      @canvas_events.attr('style', "z-index:100; position:absolute; top:0; left:0; width:#{width}px; height:#{height}px;")
+      @canvas_overlay.attr('style', "z-index:75; position:absolute; top:0; left:0; width:#{width}px; height:#{height}px;")
 
       @ctx.scale(ratio, ratio)
       @ctx.translate(0.5, 0.5)
@@ -115,17 +109,9 @@ define [
 
         ctx.measureText = (text) ->
           textMetrics = ctx.html5MeasureText(text)
-          # fake it 'til you make it
+          # fake it til you make it
           textMetrics.ascent = ctx.html5MeasureText("m").width * 1.6
           return textMetrics
-
-    _mousedown: (e) =>
-      for f in @mget('mousedown_callbacks')
-        f(e, e.layerX, e.layerY)
-
-    _mousemove: (e) =>
-      for f in @mget('mousemove_callbacks')
-        f(e, e.layerX, e.layerY)
 
   class Canvas extends LayoutBox.Model
     type: 'Canvas'
@@ -149,7 +135,8 @@ define [
       return x
 
     vy_to_sy: (y) ->
-      return @get('height') - y
+      # Note: +1 to account for 1px canvas dilation
+      return @get('height') - (y + 1)
 
     # vectorized versions of vx_to_sx/vy_to_sy, these are mutating, in-place operations
     v_vx_to_sx: (xx) ->
@@ -159,8 +146,9 @@ define [
 
     v_vy_to_sy: (yy) ->
       canvas_height = @get('height')
+      # Note: +1 to account for 1px canvas dilation
       for y, idx in yy
-        yy[idx] = canvas_height - y
+        yy[idx] = canvas_height - (y + 1)
       return yy
 
     # transform underlying screen coordinates to view coordinates
@@ -168,7 +156,8 @@ define [
       return x
 
     sy_to_vy: (y) ->
-      return @get('height') - y
+      # Note: +1 to account for 1px canvas dilation
+      return @get('height') - (y + 1)
 
     # vectorized versions of sx_to_vx/sy_to_vy, these are mutating, in-place operations
     v_sx_to_vx: (xx) ->
@@ -178,8 +167,9 @@ define [
 
     v_sy_to_vy: (yy) ->
       canvas_height = @get('height')
+      # Note: +1 to account for 1px canvas dilation
       for y, idx in yy
-        yy[idx] = canvas_height - y
+        yy[idx] = canvas_height - (y + 1)
       return yy
 
     _set_width: (width, update=true) ->
@@ -200,13 +190,13 @@ define [
         @solver.update_variables()
       @new_bounds = true
 
-    _set_dims: (dims) ->
+    _set_dims: (dims, trigger=true) ->
       @_set_width(dims[0], false)
       @_set_height(dims[1], false)
-      @solver.update_variables()
+      @solver.update_variables(trigger)
 
-    defaults: () ->
-      return {
+    defaults: ->
+      return _.extend {}, super(), {
         width: 300
         height: 300
         map: false
@@ -215,10 +205,7 @@ define [
         use_hidpi: true
       }
 
-    display_defaults: () ->
-      return { }
-
-  class Canvases extends Backbone.Collection
+  class Canvases extends Collection
     model: Canvas
 
   return {

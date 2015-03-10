@@ -2,27 +2,42 @@
 define [
   "underscore",
   "common/has_parent",
+  "common/collection",
   "renderer/properties",
   "common/plot_widget",
-], (_, HasParent, Properties, PlotWidget) ->
-
-  line_properties = Properties.line_properties
+], (_, HasParent, Collection, properties, PlotWidget) ->
 
   class GridView extends PlotWidget
     initialize: (attrs, options) ->
       super(attrs, options)
-
-      @grid_props = new line_properties(@, null, 'grid_')
+      @grid_props = new properties.Line(@, 'grid_')
+      @band_props = new properties.Fill(@, 'band_')
+      @x_range_name = @mget('x_range_name')
+      @y_range_name = @mget('y_range_name')
 
     render: () ->
       ctx = @plot_view.canvas_view.ctx
 
       ctx.save()
+      @_draw_regions(ctx)
       @_draw_grids(ctx)
       ctx.restore()
 
     bind_bokeh_events: () ->
       @listenTo(@model, 'change', @request_render)
+
+    _draw_regions: (ctx) ->
+      if not @band_props.do_fill
+        return
+      [xs, ys] = @mget('grid_coords')
+      @band_props.set(ctx, @)
+      for i in [0...xs.length-1]
+        if i % 2 == 1
+          [sx0, sy0] = @plot_view.map_to_screen(xs[i], "data", ys[i], "data", @x_range_name, @y_range_name)
+          [sx1, sy1] = @plot_view.map_to_screen(xs[i+1], "data", ys[i+1], "data", @x_range_name, @y_range_name)
+          ctx.fillRect(sx0[0], sy0[0], sx1[1]-sx0[0], sy1[1]-sy0[0])
+          ctx.fill()
+      return
 
     _draw_grids: (ctx) ->
       if not @grid_props.do_stroke
@@ -30,7 +45,7 @@ define [
       [xs, ys] = @mget('grid_coords')
       @grid_props.set(ctx, @)
       for i in [0...xs.length]
-        [sx, sy] = @plot_view.map_to_screen(xs[i], "data", ys[i], "data")
+        [sx, sy] = @plot_view.map_to_screen(xs[i], "data", ys[i], "data", @x_range_name, @y_range_name)
         ctx.beginPath()
         ctx.moveTo(Math.round(sx[0]), Math.round(sy[0]))
         for i in [1...sx.length]
@@ -56,8 +71,11 @@ define [
     _ranges: () ->
       i = @get('dimension')
       j = (i + 1) % 2
-
-      ranges = [@get('plot').get('frame').get('x_range'), @get('plot').get('frame').get('y_range')]
+      frame = @get('plot').get('frame')
+      ranges = [
+        frame.get('x_ranges')[@get('x_range_name')],
+        frame.get('y_ranges')[@get('y_range_name')]
+      ]
       return [ranges[i], ranges[j]]
 
      _bounds: () ->
@@ -117,9 +135,17 @@ define [
 
       return coords
 
-    display_defaults: () ->
-      return {
+    defaults: ->
+      return _.extend {}, super(), {
+        x_range_name: "default"
+        y_range_name: "default"
+      }
+
+    display_defaults: ->
+      return _.extend {}, super(), {
         level: 'underlay'
+        band_fill_color: null
+        band_fill_alpha: 0
         grid_line_color: '#cccccc'
         grid_line_width: 1
         grid_line_alpha: 1.0
@@ -129,7 +155,7 @@ define [
         grid_line_dash_offset: 0
       }
 
-  class Grids extends Backbone.Collection
+  class Grids extends Collection
      model: Grid
 
   return {

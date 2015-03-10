@@ -1,30 +1,15 @@
 define [
-  "common/continuum_view"
-  "backbone",
-  "common/has_parent"
-], (continuum_view, Backbone, HasParent) ->
-  class HDAlphaView extends continuum_view.View
-    attributes:
-      class: "HDAlphaView"
+  "common/collection",
+  "./transform",
+], (Collection, Transform) ->
 
-    initialize: (options) ->
-      super(options)
-      @render_init()
+  class HDAlpha extends Transform
+    type: "HDAlpha"
 
-    delegateEvents: (events) ->
-      super(events)
-      "pass"
+  class HDAlphas extends Collection
+    model: HDAlpha
 
-    render_init: () ->
-      @$el.html("")
-
-  class HDAlpha extends HasParent
-    type : "HDAlpha"
-    default_view: HDAlphaView
-  
-  class HDAlphas extends Backbone.Collection
-    model : HDAlpha
   return {
-    "Model" : HDAlpha 
-    "Collection" : new HDAlphas()
+    Model: HDAlpha
+    Collection: new HDAlphas()
   }

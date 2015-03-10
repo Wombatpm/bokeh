@@ -1,30 +1,15 @@
 define [
-  "common/continuum_view"
-  "backbone",
-  "common/has_parent",
-], (continuum_view, Backbone, HasParent) ->
-  class BinarySegmentView extends continuum_view.View
-    attributes:
-      class: "BinarySegmentView"
+  "common/collection",
+  "./transform",
+], (Collection, Transform) ->
 
-    initialize: (options) ->
-      super(options)
-      @render_init()
+  class BinarySegment extends Transform
+    type: "BinarySegment"
 
-    delegateEvents: (events) ->
-      super(events)
-      "pass"
+  class BinarySegments extends Collection
+    model: BinarySegment
 
-    render_init: () ->
-      @$el.html("")
-  
-  class BinarySegment extends HasParent
-    type : "BinarySegment"
-    default_view: BinarySegmentView 
-  
-  class BinarySegments extends Backbone.Collection
-    model : BinarySegment
   return {
-    "Model" : BinarySegment 
-    "Collection" : new BinarySegments()
+    Model: BinarySegment
+    Collection: new BinarySegments()
   }
